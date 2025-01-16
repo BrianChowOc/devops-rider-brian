@@ -1,0 +1,37 @@
+---
+- name: Installation de docker
+  become: true
+  apt:
+    name: docker.io
+    state: present
+    update_cache: yes
+
+- name: Vérifier l'existence du Dockerfile
+  stat:
+    path: "{{ destination_path }}/Dockerfile"
+  register: dockerfile_stat
+
+- debug:
+    msg: "Dockerfile existe: {{ dockerfile_stat.stat.exists }}"
+
+- name: Construire l'image Docker
+  become: true
+  docker_image:
+    name: "{{ image_name }}"
+    source: build
+    build:
+      path: "{{ destination_path }}"
+    tag: latest
+  when: dockerfile_stat.stat.exists
+
+- name: Créer et démarrer le conteneur Docker
+  become: true
+  docker_container:
+    name: "{{ container_name }}"
+    image: "{{ image_name }}:latest"
+    ports:
+      - "80:80" # Mappage du port 80 du conteneur vers le port 80 de l'hôte
+    state: started
+    restart_policy: always # Pour redémarrer le conteneur en cas d'erreur
+    volumes:
+      - "{{ destination_path }}:/var/www/html" # Monter le répertoire du site dans le conteneur

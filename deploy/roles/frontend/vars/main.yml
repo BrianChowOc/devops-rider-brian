@@ -1,0 +1,3 @@
+destination_path: "frontend"
+container_name: "devops-rider_container"
+image_name: "devops-rider_image"

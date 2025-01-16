@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription</title>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+        label {
+            display: block; /* Chaque label sur une nouvelle ligne */
+            margin-bottom: 5px;
+        }
+        input[type="text"],
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            box-sizing: border-box; /* Important pour que le padding n'affecte pas la largeur */
+        }
+        .error-message {
+          color: red;
+        }
+    </style>
+    <script>
+        function validateForm() {
+            let username = document.getElementById("username").value;
+            let email = document.getElementById("email").value;
+            let password = document.getElementById("password").value;
+            let confirm_password = document.getElementById("confirm_password").value;
+            let errorMessage = document.getElementById("error-message");
+            errorMessage.textContent = ""; // Efface les messages d'erreur précédents
+
+            if (username === "" || email === "" || password === "" || confirm_password === "") {
+                errorMessage.textContent = "Veuillez remplir tous les champs.";
+                return false;
+            }
+
+            if (password !== confirm_password) {
+              errorMessage.textContent = "Les mots de passe ne correspondent pas.";
+                return false;
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+              errorMessage.textContent = "Veuillez entrer une adresse email valide.";
+                return false;
+            }
+
+            return true;
+        }
+    </script>
+</head>
+<body>
+    <h1>Inscription</h1>
+    <form action="/api/register" method="post" onsubmit="return validateForm()">
+        <label for="username">Nom d'utilisateur :</label>
+        <input type="text" id="username" name="username" required aria-required="true"><br><br>
+
+        <label for="email">Email :</label>
+        <input type="email" id="email" name="email" required aria-required="true"><br><br>
+
+        <label for="password">Mot de passe :</label>
+        <input type="password" id="password" name="password" required aria-required="true"><br><br>
+
+        <label for="confirm_password">Confirmer le mot de passe :</label>
+        <input type="password" id="confirm_password" name="confirm_password" required aria-required="true"><br><br>
+
+        <input type="submit" value="S'inscrire">
+        <div id="error-message" class="error-message"></div>
+    </form>
+</body>
+</html>

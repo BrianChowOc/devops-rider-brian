@@ -1,0 +1,50 @@
+- name: Créer le répertoire de l'application
+  file:
+    path: /opt/votre_app
+    state: directory
+    mode: "0755"
+
+- name: Copier le fichier docker-compose.yml
+  copy:
+    src: ../../../docker-compose.yml
+    dest: /opt/votre_app/docker-compose.yml
+
+- name: Copier le schema sql
+  copy:
+    src: ../../../database/schema.sql
+    dest: /opt/votre_app/schema.sql
+
+- name: Lancer Docker Compose
+  community.docker.docker_compose:
+    definition:
+      version: "3.9"
+      services:
+        backend:
+          build: ../backend
+          ports:
+            - "5000:5000"
+          depends_on:
+            - db
+          environment:
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+            MYSQL_DATABASE: yourdatabase
+            MYSQL_USER: flask_user
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+        db:
+          image: mariadb:10.6
+          environment:
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+            MYSQL_DATABASE: yourdatabase
+            MYSQL_USER: flask_user
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+          volumes:
+            - db_data:/var/lib/mysql
+    project_src: /opt/votre_app
+    state: present
+    build: yes
+
+- name: Executer le script SQL
+  shell: docker exec -i mon_projet-db-1 mysql -u root -p"$MYSQL_ROOT_PASSWORD" yourdatabase < /opt/votre_app/schema.sql
+  args:
+    chdir: /opt/votre_app
+  delegate_to: localhost
