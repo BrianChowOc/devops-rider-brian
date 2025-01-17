@@ -6,9 +6,14 @@
     state: present
     update_cache: yes
 
+- name: Copier le contenu du dossier frontend
+  copy:
+    src: /root/devops-rider-brian/frontend
+    dest: "{{ destination_path }}" 
+
 - name: Vérifier l'existence du Dockerfile
   stat:
-    path: "{{ destination_path }}/Dockerfile"
+    path: "{{ destination_path }}/frontend/Dockerfile"
   register: dockerfile_stat
 
 - debug:
@@ -20,7 +25,7 @@
     name: "{{ image_name }}"
     source: build
     build:
-      path: "{{ destination_path }}"
+      path: "{{ destination_path }}/frontend"
     tag: latest
   when: dockerfile_stat.stat.exists
 

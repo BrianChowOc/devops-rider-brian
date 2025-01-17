@@ -3,7 +3,7 @@
   become: true
   roles:
     - frontend
-# - hosts: backend
-#   become: true
-#   roles:
-#     - backend
+- hosts: backend
+  become: true
+  roles:
+    - backend
