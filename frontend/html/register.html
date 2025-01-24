@@ -1,128 +1,110 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inscription</title>
     <style>
+        /* Styles CSS (vous pouvez les personnaliser) */
         body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f4f4f9;
+            font-family: sans-serif;
         }
-        .container {
-            width: 100%;
-            max-width: 400px;
-            background: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 24px;
-            color: #333333;
-        }
-        label {
-            font-weight: bold;
-            display: block;
-            margin-bottom: 5px;
-        }
-        input[type="text"],
-        input[type="email"],
-        input[type="password"] {
-            width: 100%;
+
+        #message {
+            margin-top: 10px;
             padding: 10px;
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
             border-radius: 5px;
-            font-size: 14px;
         }
-        button {
-            width: 100%;
-            padding: 10px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
         }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .message {
-            margin-top: 15px;
-            font-size: 14px;
-            color: green;
-            text-align: center;
-        }
+
         .error {
-            color: red;
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
         }
     </style>
 </head>
+
 <body>
-    <div class="container">
-        <h1>Inscription</h1>
-        <form id="registerForm">
+
+    <h1>Inscription</h1>
+
+    <form id="inscriptionForm">
+        <div>
             <label for="username">Nom d'utilisateur :</label>
-            <input type="text" id="username" name="username" placeholder="Entrez votre nom d'utilisateur" required>
-
+            <input type="text" id="username" name="username" required>
+        </div>
+        <div>
             <label for="email">Email :</label>
-            <input type="email" id="email" name="email" placeholder="Entrez votre email" required>
-
+            <input type="email" id="email" name="email" required>
+        </div>
+        <div>
             <label for="password">Mot de passe :</label>
-            <input type="password" id="password" name="password" placeholder="Entrez votre mot de passe" required>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <div>
+            <label for="confirmation_mot_de_passe">Confirmer le mot de passe :</label>
+            <input type="password" id="confirmation_mot_de_passe" name="confirmation_mot_de_passe" required>
+        </div>
 
-            <button type="submit">S'inscrire</button>
-        </form>
-        <div class="message" id="responseMessage"></div>
-    </div>
+        <button type="submit">S'inscrire</button>
+        <div id="message"></div>
+    </form>
 
     <script>
-        document.getElementById('registerForm').addEventListener('submit', async function(event) {
-            event.preventDefault(); // Empêche le rechargement de la page
+        const form = document.getElementById('inscriptionForm');
+        const messageDiv = document.getElementById('message');
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault(); // Empêche la soumission classique du formulaire
+
+            messageDiv.textContent = ""; // Efface les messages précédents
+            messageDiv.className = ""; // Réinitialise les classes CSS
 
             const username = document.getElementById('username').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const confirmationPassword = document.getElementById('confirmation_mot_de_passe').value;
 
-            try {
-                const response = await fetch('http://127.0.0.1:5000/users', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        username: username,
-                        email: email,
-                        password: password
-                    })
-                });
-
-                const data = await response.json();
-
-                const messageElement = document.getElementById('responseMessage');
-                if (response.ok) {
-                    messageElement.textContent = data.message;
-                    messageElement.className = 'message';
-                } else {
-                    messageElement.textContent = data.error;
-                    messageElement.className = 'message error';
-                }
-            } catch (error) {
-                document.getElementById('responseMessage').textContent = 'Une erreur est survenue.';
-                document.getElementById('responseMessage').className = 'message error';
+            if (password !== confirmationPassword) {
+                messageDiv.textContent = "Les mots de passe ne correspondent pas.";
+                messageDiv.className = "error";
+                return;
             }
+
+            fetch('http://192.168.1.17:5000/add_user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, email, password })
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => { throw new Error(err.error || "Erreur inconnue") });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Success data:", data); // Affiche les données de succès
+                    messageDiv.textContent = data.message || "Inscription réussie !";
+                    messageDiv.className = "success";
+                    form.reset();
+                })
+                .catch(error => {
+                    console.error("Fetch error:", error); // Affiche l'erreur fetch
+                    messageDiv.textContent = "Erreur : " + error.message;
+                    messageDiv.className = "error";
+                });
         });
     </script>
+
 </body>
+
 </html>

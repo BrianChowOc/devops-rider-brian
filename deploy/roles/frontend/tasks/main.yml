@@ -39,4 +39,4 @@
     state: started
     restart_policy: always # Pour redémarrer le conteneur en cas d'erreur
     volumes:
-      - "{{ destination_path }}:/var/www/html" # Monter le répertoire du site dans le conteneur
+      - "{{ destination_path }}/frontend/html:/usr/share/nginx/html" # Monter le répertoire du site dans le conteneur

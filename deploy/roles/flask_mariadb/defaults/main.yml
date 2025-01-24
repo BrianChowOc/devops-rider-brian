@@ -1,0 +1,7 @@
+---
+app_directory: /opt/flask-app
+flask_port: 5000
+mariadb_database: devops_rider
+mariadb_user: brian
+mariadb_password: qwerty
+mariadb_root_password: qwerty

@@ -1,0 +1,56 @@
+- name: Install required packages
+  apt:
+    name:
+      - docker.io
+      - curl
+      - python3-pip
+    state: present
+    update_cache: yes
+  become: true
+
+
+- name: Create project directory
+  file:
+    path: "{{ app_directory }}"
+    state: directory
+    mode: '0755'
+
+- name: Create app directory
+  file:
+    path: "{{ app_directory }}/app"
+    state: directory
+    mode: '0755'
+
+- name: Copy Flask application files
+  template:
+    src: /root/devops-rider-brian/backend/{{ item }}
+    dest: "{{ app_directory }}/app/{{ item }}"
+  with_items:
+    - app.py
+    - requirements.txt
+
+- name: Copy Docker Compose file
+  template:
+    src: docker-compose.yml
+    dest: "{{ app_directory }}/docker-compose.yml"
+
+- name: Copy Dockerfile
+  template:
+    src: Dockerfile
+    dest: "{{ app_directory }}/Dockerfile"
+
+- name: Copy init.sql
+  template:
+    src: init.sql
+    dest: "{{ app_directory }}/init.sql"
+
+- name: Install Docker Compose using official script
+  shell: |
+    curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+  become: true
+
+- name: Start Docker Compose
+  shell: |
+    /usr/local/bin/docker-compose -f "{{ app_directory }}/docker-compose.yml" up -d
+  become: true

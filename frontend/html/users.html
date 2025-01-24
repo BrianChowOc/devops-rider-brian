@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Liste des utilisateurs</title>
+</head>
+
+<body>
+    <h1>Liste des utilisateurs</h1>
+    <ul id="user-list"></ul>
+
+    <script>
+        fetch('http://192.168.1.17:5000/users') // Requête GET vers votre route Flask
+            .then(response => response.json()) // Parse la réponse JSON
+            .then(users => {
+                const userList = document.getElementById('user-list');
+                users.forEach(user => {
+                    const li = document.createElement('li');
+                    li.textContent = `ID: ${user.id}, Nom d'utilisateur: ${user.username}, Email: ${user.email}`;
+                    userList.appendChild(li);
+                });
+            })
+            .catch(error => {
+                console.error('Erreur lors de la récupération des utilisateurs:', error);
+                const userList = document.getElementById('user-list');
+                const li = document.createElement('li');
+                li.textContent = "Erreur lors du chargement des utilisateurs.";
+                userList.appendChild(li);
+            });
+    </script>
+</body>
+
+</html>

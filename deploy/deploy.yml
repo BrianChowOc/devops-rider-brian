@@ -3,7 +3,7 @@
   become: true
   roles:
     - frontend
-- hosts: backend
+- hosts: flask_mariadb
   become: true
   roles:
-    - backend
+    - flask_mariadb

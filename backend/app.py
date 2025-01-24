@@ -1,78 +1,120 @@
 from flask import Flask, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from flask_bcrypt import Bcrypt
 from flask_cors import CORS
-import sqlite3
+from sqlalchemy import text
+import pymysql
+import os
 
 app = Flask(__name__)
-CORS(app) 
+CORS(app)
 
-DATABASE = './database/database.db'
+pymysql.install_as_MySQLdb()
 
-# Fonction pour se connecter à la base de données
-def get_db_connection():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row  # Permet d'accéder aux colonnes par leur nom
-    return conn
+# Configuration de la base de données
+try:
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{os.environ['MYSQL_USER']}:{os.environ['MYSQL_PASSWORD']}@{os.environ['MYSQL_HOST']}/{os.environ['MYSQL_DATABASE']}"
+    print("Connexion à la base de données configurée avec succès.") # message de confirmation
+except KeyError as e:
+    print(f"Erreur : Variable d'environnement manquante : {e}")
+    exit(1) # Arrête l'application si les variables ne sont pas définies
 
-# Endpoint pour initialiser la base de données
-@app.route('/init_db', methods=['GET'])
-def init_db():
-    try:
-        conn = get_db_connection()
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL,
-                email TEXT NOT NULL,
-                password TEXT NOT NULL
-            )
-        ''')
-        conn.commit()
-        conn.close()
-        return jsonify({'message': 'Base de données initialisée avec succès.'}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Endpoint pour ajouter un utilisateur
-@app.route('/users', methods=['POST'])
+db = SQLAlchemy(app)
+bcrypt = Bcrypt(app)
+
+# Définition du modèle utilisateur
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128))
+
+    def set_password(self, password):
+        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    def check_password(self, password):
+        return bcrypt.check_password_hash(self.password_hash, password)
+
+    def __repr__(self):
+        return '<User %r>' % self.username
+
+
+print("=== Configuration de la base de données ===")
+print(f"MYSQL_HOST: {os.environ['MYSQL_HOST']}")
+print(f"MYSQL_USER: {os.environ['MYSQL_USER']}")
+print(f"MYSQL_DATABASE: {os.environ['MYSQL_DATABASE']}")
+
+# Création des tables (à exécuter une seule fois)
+with app.app_context():
+    db.create_all()
+
+@app.route('/add_user', methods=['POST'])
 def add_user():
-    data = request.get_json()
-    username = data.get('username')
-    email = data.get('email')
-    password = data.get('password')
+    if request.method == 'POST':
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'message': 'No JSON data provided'}), 400
 
-    if not username or not email or not password:
-        return jsonify({'error': 'Tous les champs sont obligatoires.'}), 400
+            username = data.get('username')
+            email = data.get('email')
+            password = data.get('password')
 
-    conn = get_db_connection()
-    conn.execute(
-        'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
-        (username, email, password)
-    )
-    conn.commit()
-    conn.close()
-    return jsonify({'message': 'Utilisateur ajouté avec succès.'}), 201
+            if not username or not email or not password:
+                return jsonify({'message': 'Username, email and password are required'}), 400
 
-# Endpoint pour récupérer tous les utilisateurs
+            existing_user = User.query.filter_by(username=username).first()
+            if existing_user:
+                return jsonify({'message': 'Username already exists'}), 409
+
+            existing_email = User.query.filter_by(email=email).first()
+            if existing_email:
+                return jsonify({'message': 'Email already exists'}), 409
+
+            new_user = User(username=username, email=email)
+            new_user.set_password(password)
+            db.session.add(new_user)
+            db.session.commit()
+
+            return jsonify({'message': 'User added successfully'}), 201
+
+        except Exception as e:
+            db.session.rollback()  # Très important en cas d'erreur avec la base de données
+            print(f"Erreur lors de l'ajout de l'utilisateur : {str(e)}")
+            return jsonify({'message': f'Error: {str(e)}'}), 500
+    else:
+        return jsonify({'message': 'Method not allowed'}), 405
+
 @app.route('/users', methods=['GET'])
 def get_users():
-    conn = get_db_connection()
-    users = conn.execute('SELECT * FROM users').fetchall()
-    conn.close()
+    try:
+        users = User.query.all()  # Récupère tous les utilisateurs de la base de données
+        user_list = []
+        for user in users:
+            user_list.append({
+                'id': user.id,
+                'username': user.username,
+                'email': user.email
+            })
+        return jsonify(user_list), 200  # Retourne la liste des utilisateurs au format JSON
+    except Exception as e:
+        print(f"Erreur lors de la récupération des utilisateurs : {e}")
+        return jsonify({'message': f'Erreur : {str(e)}'}), 500
 
-    user_list = [dict(user) for user in users]
-    return jsonify(user_list), 200
+def test_db_connection():
+    try:
+        with app.app_context():
+            with db.engine.connect() as connection:
+                result = connection.execute(text("SELECT 1"))
+                print("Connexion à la base de données réussie!")
+                return True
+    except Exception as e:
+        print(f"Erreur de connexion à la base de données : {e}")
+        return False
 
-# Endpoint pour récupérer un utilisateur par ID
-@app.route('/users/<int:user_id>', methods=['GET'])
-def get_user(user_id):
-    conn = get_db_connection()
-    user = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
-    conn.close()
-
-    if user is None:
-        return jsonify({'error': 'Utilisateur introuvable.'}), 404
-
-    return jsonify(dict(user)), 200
+test_db_connection()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)

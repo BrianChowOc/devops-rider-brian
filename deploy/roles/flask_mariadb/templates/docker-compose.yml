@@ -1,0 +1,36 @@
+version: '3.8' # Utiliser une version plus récente de Docker Compose
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - MYSQL_HOST=db # Important : le nom du service Docker
+      - MYSQL_USER=brian_test
+      - MYSQL_PASSWORD=testtest
+      - MYSQL_DATABASE=devops_rider
+    volumes:
+      - /opt/flask-app/app:/app
+    depends_on:
+      db:
+        condition: service_healthy # Attendre que la base soit prête
+
+  db:
+    image: mariadb:latest
+    environment:
+      - MARIADB_ROOT_PASSWORD=testtest
+      - MARIADB_DATABASE=devops_rider
+      - MARIADB_USER=brian_test
+      - MARIADB_PASSWORD=testtest
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck: # Vérification de l'état de la base
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u root -p$$MARIADB_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mariadb_data:
