@@ -8,7 +8,7 @@
 
 - name: Copier le contenu du dossier frontend
   copy:
-    src: /root/devops-rider-brian/frontend
+    src: /root/devops-rider-local/frontend
     dest: "{{ destination_path }}" 
 
 - name: Vérifier l'existence du Dockerfile
