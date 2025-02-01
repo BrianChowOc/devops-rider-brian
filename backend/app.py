@@ -107,12 +107,24 @@ def test_db_connection():
     try:
         with app.app_context():
             with db.engine.connect() as connection:
-                result = connection.execute(text("SELECT 1"))
                 print("Connexion à la base de données réussie!")
                 return True
     except Exception as e:
         print(f"Erreur de connexion à la base de données : {e}")
         return False
+
+@app.route('/users/<int:user_id>', methods=['DELETE'])
+def delete_user_route(user_id):
+    try:
+        user = User.query.get_or_404(user_id)
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({'message': 'User deleted successfully'}), 200
+    except ValueError:
+        return jsonify({'message': 'User not found'}), 404
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+    
 
 test_db_connection()
 
